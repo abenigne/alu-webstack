@@ -1,39 +1,13 @@
 #!/usr/bin/env bash
-# This script displays DNS record information for specific subdomains or all default subdomains of a given domain using dig and awk.
-
-# shellcheck disable=SC2086
-
-audit_subdomain() {
-    local domain="$1"
-    local sub="$2"
-    local full_domain="${sub}.${domain}"
-    
-    # Query A record using dig and extract record type and destination IP using awk
-    local record_info
-    record_info=$(dig +noall +answer "$full_domain" | awk '$4 == "A" {print $4, $5; exit}')
-    
-    if [ -n "$record_info" ]; then
-        local record_type
-        local destination
-        record_type=$(echo "$record_info" | awk '{print $1}')
-        destination=$(echo "$record_info" | awk '{print $2}')
-        echo "The subdomain $sub is a $record_type record and points to $destination"
-    fi
+# Displays the record type and destination of subdomains of a domain
+display_info() {
+    dig "$2.$1" | grep -A1 'ANSWER SECTION:' | tail -n 1 | awk -v s="$2" '{print "The subdomain " s " is a " $4 " record and points to " $5}'
 }
 
-# Check if domain argument is provided
-if [ -z "$1" ]; then
-    exit 1
-fi
-
-DOMAIN="$1"
-SUBDOMAIN="$2"
-
-if [ -n "$SUBDOMAIN" ]; then
-    audit_subdomain "$DOMAIN" "$SUBDOMAIN"
-else
-    # Default subdomains in exact order: www, lb-01, web-01, web-02
+if [ "$#" -eq 1 ]; then
     for sub in www lb-01 web-01 web-02; do
-        audit_subdomain "$DOMAIN" "$sub"
+        display_info "$1" "$sub"
     done
+else
+    display_info "$1" "$2"
 fi
