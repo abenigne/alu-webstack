@@ -1,0 +1,33 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    user haproxy
+    group haproxy
+    daemon
+    maxconn 2048
+    tune.ssl.default-dh-param 2048
+    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+
+frontend http_front
+    bind *:80
+    http-request redirect scheme https code 301
+
+frontend https_front
+    bind *:443 ssl crt /etc/haproxy/certs/www.welearneveryday.tech.pem
+    http-request set-header X-Forwarded-Proto https
+    default_backend web_servers
+
+backend web_servers
+    balance roundrobin
+    server 7251-web-01 18.133.182.194:80 check
+#    server 7251-web-02 13.135.166.54:80 check
